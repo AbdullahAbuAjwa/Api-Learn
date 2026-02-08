@@ -39,6 +39,10 @@ dependencies:
   # Used for all REST API networking in this application.
   dio: ^5.4.0
   
+  # GetX: State management, navigation, and dependency injection
+  # إدارة الحالة، التنقل، وحقن التبعيات
+  get: ^4.6.6
+  
   # JSON serialization: Provides code generation for JSON parsing
   json_annotation: ^4.8.1
 

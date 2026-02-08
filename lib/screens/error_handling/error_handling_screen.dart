@@ -1,228 +1,124 @@
 import 'package:flutter/material.dart';
-import '../../core/core.dart';
+import 'package:get/get.dart';
+import '../../controllers/controllers.dart';
 
 /// ============================================================================
-/// Error Handling Screen: Demonstrates Various Error Scenarios
+/// شاشة معالجة الأخطاء: توضح سيناريوهات الأخطاء المختلفة باستخدام GetX
+/// Error Handling Screen: Demonstrates Various Error Scenarios using GetX
 /// ============================================================================
 ///
-/// This screen demonstrates:
-/// 1. Different types of errors (network, server, client)
-/// 2. Error handling strategies
-/// 3. Retry mechanisms
-/// 4. User-friendly error messages
-/// 5. Graceful degradation
+/// هذه الشاشة توضح | This screen demonstrates:
+/// 1. أنواع مختلفة من الأخطاء (شبكة، خادم، عميل)
+///    Different types of errors (network, server, client)
+/// 2. استراتيجيات معالجة الأخطاء
+///    Error handling strategies
+/// 3. آليات إعادة المحاولة
+///    Retry mechanisms
+/// 4. رسائل خطأ سهلة للمستخدم
+///    User-friendly error messages
+/// 5. التدهور الرشيق
+///    Graceful degradation
 ///
-/// Learning Objectives:
-/// - Understand different error types in API calls
-/// - Learn to handle errors gracefully
-/// - See retry patterns in action
-/// - Understand user experience during errors
+/// أهداف التعلم | Learning Objectives:
+/// - فهم أنواع الأخطاء المختلفة في استدعاءات API
+///   Understand different error types in API calls
+/// - تعلم معالجة الأخطاء بشكل رشيق
+///   Learn to handle errors gracefully
+/// - رؤية أنماط إعادة المحاولة عملياً
+///   See retry patterns in action
+/// - فهم تجربة المستخدم أثناء الأخطاء
+///   Understand user experience during errors
 /// ============================================================================
 
-class ErrorHandlingScreen extends StatefulWidget {
-  const ErrorHandlingScreen({super.key});
+/// فئة مساعدة لسيناريوهات الأخطاء
+/// Helper class for error scenarios
+class ErrorScenario {
+  /// عنوان السيناريو | Scenario title
+  final String title;
 
-  @override
-  State<ErrorHandlingScreen> createState() => _ErrorHandlingScreenState();
+  /// وصف السيناريو | Scenario description
+  final String description;
+
+  /// نقطة النهاية | Endpoint
+  final String endpoint;
+
+  /// النتيجة المتوقعة | Expected outcome
+  final String expectedOutcome;
+
+  /// أيقونة السيناريو | Scenario icon
+  final IconData icon;
+
+  /// لون السيناريو | Scenario color
+  final Color color;
+
+  ErrorScenario({
+    required this.title,
+    required this.description,
+    required this.endpoint,
+    required this.expectedOutcome,
+    required this.icon,
+    required this.color,
+  });
 }
 
-class _ErrorHandlingScreenState extends State<ErrorHandlingScreen> {
-  final PostApiService _postService = PostApiService(dioClient);
+/// شاشة معالجة الأخطاء باستخدام GetView
+/// Error handling screen using GetView
+class ErrorHandlingScreen extends GetView<ErrorHandlingController> {
+  const ErrorHandlingScreen({super.key});
 
-  String? _statusMessage;
-  bool _isLoading = false;
-  Color _statusColor = Colors.grey;
-  IconData _statusIcon = Icons.info;
-
-  /// Simulated error scenarios
-  final List<_ErrorScenario> _scenarios = [
-    _ErrorScenario(
-      title: 'Successful Request',
-      description: 'Normal successful API call',
+  /// قائمة سيناريوهات الاختبار | Test scenarios list
+  static final List<ErrorScenario> _scenarios = [
+    // سيناريو طلب ناجح | Successful request scenario
+    ErrorScenario(
+      title: 'طلب ناجح - Successful Request',
+      description: 'استدعاء API ناجح عادي - Normal successful API call',
       endpoint: '/posts/1',
-      expectedOutcome: 'Returns post data (status 200)',
+      expectedOutcome:
+          'يرجع بيانات المنشور (حالة 200) - Returns post data (status 200)',
       icon: Icons.check_circle,
       color: Colors.green,
     ),
-    _ErrorScenario(
-      title: 'Not Found (404)',
-      description: 'Resource does not exist',
+    // سيناريو غير موجود | Not found scenario
+    ErrorScenario(
+      title: 'غير موجود (404) - Not Found (404)',
+      description: 'المورد غير موجود - Resource does not exist',
       endpoint: '/posts/999999',
-      expectedOutcome: 'Returns 404 error',
+      expectedOutcome: 'يرجع خطأ 404 - Returns 404 error',
       icon: Icons.search_off,
       color: Colors.orange,
     ),
-    _ErrorScenario(
-      title: 'Invalid Endpoint',
-      description: 'Endpoint does not exist',
+    // سيناريو نقطة نهاية غير صالحة | Invalid endpoint scenario
+    ErrorScenario(
+      title: 'نقطة نهاية غير صالحة - Invalid Endpoint',
+      description: 'نقطة النهاية غير موجودة - Endpoint does not exist',
       endpoint: '/invalid-endpoint',
-      expectedOutcome: 'Returns 404 error',
+      expectedOutcome: 'يرجع خطأ 404 - Returns 404 error',
       icon: Icons.link_off,
       color: Colors.orange,
     ),
-    _ErrorScenario(
-      title: 'Network Simulation',
-      description: 'Simulates a network request',
+    // سيناريو محاكاة الشبكة | Network simulation scenario
+    ErrorScenario(
+      title: 'محاكاة الشبكة - Network Simulation',
+      description: 'يحاكي طلب شبكة - Simulates a network request',
       endpoint: '/posts',
-      expectedOutcome: 'Demonstrates loading states',
+      expectedOutcome: 'يوضح حالات التحميل - Demonstrates loading states',
       icon: Icons.wifi,
       color: Colors.blue,
     ),
   ];
 
-  /// ========================================
-  /// Test Successful Request
-  /// ========================================
-  Future<void> _testSuccessfulRequest() async {
-    setState(() {
-      _isLoading = true;
-      _statusMessage = 'Making request...';
-      _statusColor = Colors.blue;
-      _statusIcon = Icons.hourglass_empty;
-    });
-
-    final response = await _postService.getPostById(1);
-
-    setState(() {
-      _isLoading = false;
-      if (response.isSuccess) {
-        _statusMessage =
-            '✅ Success!\n\n'
-            'Status Code: 200\n'
-            'Post Title: ${response.data?.title}\n'
-            'User ID: ${response.data?.userId}';
-        _statusColor = Colors.green;
-        _statusIcon = Icons.check_circle;
-      } else {
-        _statusMessage = '❌ Failed: ${response.error?.message}';
-        _statusColor = Colors.red;
-        _statusIcon = Icons.error;
-      }
-    });
-  }
-
-  /// ========================================
-  /// Test 404 Not Found
-  /// ========================================
-  Future<void> _testNotFound() async {
-    setState(() {
-      _isLoading = true;
-      _statusMessage = 'Requesting non-existent post...';
-      _statusColor = Colors.blue;
-      _statusIcon = Icons.hourglass_empty;
-    });
-
-    // Request a post that doesn't exist
-    final response = await _postService.getPostById(999999);
-
-    setState(() {
-      _isLoading = false;
-      if (!response.isSuccess) {
-        _statusMessage =
-            '⚠️ Not Found!\n\n'
-            'Status Code: ${response.statusCode}\n'
-            'Error Type: ${response.error?.type}\n'
-            'Message: ${response.error?.message}\n\n'
-            'This is expected when requesting a resource that doesn\'t exist.';
-        _statusColor = Colors.orange;
-        _statusIcon = Icons.search_off;
-      } else {
-        _statusMessage = 'Unexpectedly succeeded!';
-        _statusColor = Colors.green;
-        _statusIcon = Icons.check_circle;
-      }
-    });
-  }
-
-  /// ========================================
-  /// Test Invalid Endpoint
-  /// ========================================
-  Future<void> _testInvalidEndpoint() async {
-    setState(() {
-      _isLoading = true;
-      _statusMessage = 'Requesting invalid endpoint...';
-      _statusColor = Colors.blue;
-      _statusIcon = Icons.hourglass_empty;
-    });
-
-    try {
-      // This will likely return a 404 or other error
-      await dioClient.get('/this-endpoint-does-not-exist');
-
-      setState(() {
-        _isLoading = false;
-        _statusMessage = 'Request completed (may have returned empty data)';
-        _statusColor = Colors.orange;
-        _statusIcon = Icons.warning;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _statusMessage =
-            '❌ Error!\n\n'
-            'Exception Type: ${e.runtimeType}\n'
-            'Message: ${e.toString()}\n\n'
-            'This demonstrates how invalid endpoints are handled.';
-        _statusColor = Colors.red;
-        _statusIcon = Icons.error;
-      });
-    }
-  }
-
-  /// ========================================
-  /// Test Network Request with Loading
-  /// ========================================
-  Future<void> _testNetworkRequest() async {
-    setState(() {
-      _isLoading = true;
-      _statusMessage = 'Step 1: Initiating request...';
-      _statusColor = Colors.blue;
-      _statusIcon = Icons.wifi;
-    });
-
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 500));
-    setState(() => _statusMessage = 'Step 2: Connecting to server...');
-
-    await Future.delayed(const Duration(milliseconds: 500));
-    setState(() => _statusMessage = 'Step 3: Waiting for response...');
-
-    final response = await _postService.getAllPosts();
-
-    await Future.delayed(const Duration(milliseconds: 300));
-    setState(() => _statusMessage = 'Step 4: Parsing response...');
-
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    setState(() {
-      _isLoading = false;
-      if (response.isSuccess) {
-        _statusMessage =
-            '✅ Complete!\n\n'
-            'Fetched ${response.data?.length} posts\n'
-            'Status: ${response.statusCode}\n\n'
-            'All steps completed successfully.';
-        _statusColor = Colors.green;
-        _statusIcon = Icons.check_circle;
-      } else {
-        _statusMessage = '❌ Failed: ${response.error?.message}';
-        _statusColor = Colors.red;
-        _statusIcon = Icons.error;
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Error Handling')),
+      // شريط التطبيق | App bar
+      appBar: AppBar(title: const Text('معالجة الأخطاء - Error Handling')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // ========================================
-            // Information Card
+            // بطاقة المعلومات | Information Card
             // ========================================
             Card(
               color: Theme.of(context).colorScheme.secondaryContainer,
@@ -241,7 +137,7 @@ class _ErrorHandlingScreenState extends State<ErrorHandlingScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Error Handling Best Practices',
+                          'أفضل ممارسات معالجة الأخطاء - Error Handling Best Practices',
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(
                                 color: Theme.of(
@@ -253,22 +149,31 @@ class _ErrorHandlingScreenState extends State<ErrorHandlingScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
+                    // قائمة أفضل الممارسات | Best practices list
                     _buildPractice(
+                      context,
                       '1.',
-                      'Use specific exception types for different errors',
+                      'استخدم أنواع استثناءات محددة لأخطاء مختلفة\nUse specific exception types for different errors',
                     ),
-                    _buildPractice('2.', 'Show user-friendly error messages'),
                     _buildPractice(
+                      context,
+                      '2.',
+                      'اعرض رسائل خطأ سهلة للمستخدم\nShow user-friendly error messages',
+                    ),
+                    _buildPractice(
+                      context,
                       '3.',
-                      'Implement retry mechanisms for transient failures',
+                      'طبّق آليات إعادة المحاولة للأخطاء المؤقتة\nImplement retry mechanisms for transient failures',
                     ),
                     _buildPractice(
+                      context,
                       '4.',
-                      'Log errors for debugging (not in production UI)',
+                      'سجّل الأخطاء للتصحيح (ليس في واجهة الإنتاج)\nLog errors for debugging (not in production UI)',
                     ),
                     _buildPractice(
+                      context,
                       '5.',
-                      'Provide fallback options when possible',
+                      'وفّر خيارات بديلة عند الإمكان\nProvide fallback options when possible',
                     ),
                   ],
                 ),
@@ -277,86 +182,105 @@ class _ErrorHandlingScreenState extends State<ErrorHandlingScreen> {
             const SizedBox(height: 24),
 
             // ========================================
-            // Status Display
+            // عرض الحالة التفاعلي | Reactive Status Display
             // ========================================
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Icon(_statusIcon, size: 48, color: _statusColor),
-                    const SizedBox(height: 12),
-                    if (_isLoading)
-                      const LinearProgressIndicator()
-                    else
-                      const SizedBox(height: 4),
-                    const SizedBox(height: 12),
-                    Text(
-                      _statusMessage ?? 'Select a scenario to test',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
+            Obx(
+              () => Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      // أيقونة الحالة | Status icon
+                      Icon(
+                        controller.statusIcon.value,
+                        size: 48,
+                        color: controller.statusColor.value,
+                      ),
+                      const SizedBox(height: 12),
+                      // مؤشر التحميل | Loading indicator
+                      if (controller.isLoading.value)
+                        const LinearProgressIndicator()
+                      else
+                        const SizedBox(height: 4),
+                      const SizedBox(height: 12),
+                      // رسالة الحالة | Status message
+                      Text(
+                        controller.statusMessage.value ??
+                            'اختر سيناريو للاختبار - Select a scenario to test',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 24),
 
             // ========================================
-            // Test Scenarios
+            // سيناريوهات الاختبار | Test Scenarios
             // ========================================
             Text(
-              'Test Scenarios',
+              'سيناريوهات الاختبار - Test Scenarios',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 16),
 
-            // Scenario buttons
-            _buildScenarioButton(_scenarios[0], _testSuccessfulRequest),
-            _buildScenarioButton(_scenarios[1], _testNotFound),
-            _buildScenarioButton(_scenarios[2], _testInvalidEndpoint),
-            _buildScenarioButton(_scenarios[3], _testNetworkRequest),
+            // أزرار السيناريوهات | Scenario buttons
+            _buildScenarioButton(
+              _scenarios[0],
+              controller.testSuccessfulRequest,
+            ),
+            _buildScenarioButton(_scenarios[1], controller.testNotFound),
+            _buildScenarioButton(_scenarios[2], controller.testInvalidEndpoint),
+            _buildScenarioButton(_scenarios[3], controller.testNetworkRequest),
 
             const SizedBox(height: 32),
 
             // ========================================
-            // Error Types Reference
+            // مرجع أنواع الأخطاء | Error Types Reference
             // ========================================
             Text(
-              'Error Types Reference',
+              'مرجع أنواع الأخطاء - Error Types Reference',
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
 
+            // بطاقات أنواع الأخطاء | Error type cards
             _buildErrorTypeCard(
+              context,
               'NetworkException',
-              'No internet connection, timeouts, DNS errors',
+              'لا يوجد اتصال بالإنترنت، انتهاء المهلة، أخطاء DNS\nNo internet connection, timeouts, DNS errors',
               Icons.wifi_off,
               Colors.red,
             ),
             _buildErrorTypeCard(
+              context,
               'ServerException (5xx)',
-              'Internal server error, service unavailable',
+              'خطأ داخلي في الخادم، الخدمة غير متاحة\nInternal server error, service unavailable',
               Icons.dns,
               Colors.red,
             ),
             _buildErrorTypeCard(
+              context,
               'ClientException (4xx)',
-              'Bad request, unauthorized, forbidden, not found',
+              'طلب غير صالح، غير مصرح، محظور، غير موجود\nBad request, unauthorized, forbidden, not found',
               Icons.person_off,
               Colors.orange,
             ),
             _buildErrorTypeCard(
+              context,
               'ValidationException',
-              'Invalid input data, missing required fields',
+              'بيانات إدخال غير صالحة، حقول مطلوبة مفقودة\nInvalid input data, missing required fields',
               Icons.warning,
               Colors.amber,
             ),
             _buildErrorTypeCard(
+              context,
               'UnauthorizedException',
-              'Authentication required or token expired',
+              'المصادقة مطلوبة أو انتهت صلاحية الرمز\nAuthentication required or token expired',
               Icons.lock,
               Colors.purple,
             ),
@@ -366,7 +290,8 @@ class _ErrorHandlingScreenState extends State<ErrorHandlingScreen> {
     );
   }
 
-  Widget _buildPractice(String number, String text) {
+  /// بناء عنصر أفضل ممارسة | Build practice item
+  Widget _buildPractice(BuildContext context, String number, String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
@@ -393,20 +318,26 @@ class _ErrorHandlingScreenState extends State<ErrorHandlingScreen> {
     );
   }
 
-  Widget _buildScenarioButton(_ErrorScenario scenario, VoidCallback onTap) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: Icon(scenario.icon, color: scenario.color),
-        title: Text(scenario.title),
-        subtitle: Text(scenario.description),
-        trailing: const Icon(Icons.play_arrow),
-        onTap: _isLoading ? null : onTap,
+  /// بناء زر سيناريو | Build scenario button
+  Widget _buildScenarioButton(ErrorScenario scenario, VoidCallback onTap) {
+    return Obx(
+      () => Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        child: ListTile(
+          leading: Icon(scenario.icon, color: scenario.color),
+          title: Text(scenario.title),
+          subtitle: Text(scenario.description),
+          trailing: const Icon(Icons.play_arrow),
+          // تعطيل أثناء التحميل | Disable during loading
+          onTap: controller.isLoading.value ? null : onTap,
+        ),
       ),
     );
   }
 
+  /// بناء بطاقة نوع خطأ | Build error type card
   Widget _buildErrorTypeCard(
+    BuildContext context,
     String title,
     String description,
     IconData icon,
@@ -418,6 +349,7 @@ class _ErrorHandlingScreenState extends State<ErrorHandlingScreen> {
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
+            // أيقونة نوع الخطأ | Error type icon
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
@@ -431,10 +363,12 @@ class _ErrorHandlingScreenState extends State<ErrorHandlingScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // اسم نوع الخطأ | Error type name
                   Text(
                     title,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
+                  // وصف نوع الخطأ | Error type description
                   Text(
                     description,
                     style: Theme.of(context).textTheme.bodySmall,
@@ -447,23 +381,4 @@ class _ErrorHandlingScreenState extends State<ErrorHandlingScreen> {
       ),
     );
   }
-}
-
-/// Helper class for error scenarios
-class _ErrorScenario {
-  final String title;
-  final String description;
-  final String endpoint;
-  final String expectedOutcome;
-  final IconData icon;
-  final Color color;
-
-  _ErrorScenario({
-    required this.title,
-    required this.description,
-    required this.endpoint,
-    required this.expectedOutcome,
-    required this.icon,
-    required this.color,
-  });
 }
